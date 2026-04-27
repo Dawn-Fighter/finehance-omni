@@ -1244,9 +1244,6 @@ export function Dashboard() {
                     })}
                   </div>
                 </Panel>
-
-                {/* ARIMA Insights */}
-                <InsightsPanel />
               </div>
 
               {/* Right rail */}
