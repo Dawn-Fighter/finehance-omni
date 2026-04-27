@@ -58,14 +58,14 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement DeepLedger and GhostTable
-  - [-] 5.1 Create DeepLedger modal/full-page view
+  - [ ] 5.1 Create DeepLedger modal/full-page view
     - Build modal or full-page container with close functionality
     - Add filter and search controls at top
     - Implement state management for deepLedgerVisible
     - Wire up "View Full History" button to open DeepLedger
     - _Requirements: 2.5, 2.6_
 
-  - [~] 5.2 Implement GhostTable component with virtualization
+  - [ ] 5.2 Implement GhostTable component with virtualization
     - Create table with columns: Date/Time, Category, Origin Entity, Destination Entity, Amount, Status
     - Apply 40% opacity styling and monospace font
     - Integrate react-window or react-virtual for virtualization
@@ -80,7 +80,7 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
     - _Requirements: 2.9, 2.10_
 
 - [ ] 6. Refactor Bot Hub to single button
-  - [~] 6.1 Replace fragmented bot interface with single button
+  - [ ] 6.1 Replace fragmented bot interface with single button
     - Remove Voice, Receipt, and Text input buttons
     - Create "EXECUTE BOT COMMANDS" button with high-visibility styling
     - Implement click handler to open Telegram deep-link in new window
@@ -94,7 +94,7 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
     - _Requirements: 3.2, 3.3_
 
 - [ ] 7. Transform Analyst AI to Monthly Summary
-  - [~] 7.1 Create MonthlySummary component
+  - [ ] 7.1 Create MonthlySummary component
     - Remove chat input interface from existing Analyst AI section
     - Rename section to "Monthly Summary"
     - Build human-readable briefing display
@@ -102,7 +102,7 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
     - Add anomaly highlighting (green for positive, red/amber for negative)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [~] 7.2 Implement monthly summary computation
+  - [ ] 7.2 Implement monthly summary computation
     - Create function to compute current month financial data
     - Calculate comparison percentages against previous month
     - Detect spending anomalies (>20% above historical average)
@@ -110,7 +110,7 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
     - Generate human-readable summary text
     - _Requirements: 4.4, 4.5, 4.6, 4.7_
 
-  - [~] 7.3 Add automatic update trigger
+  - [ ] 7.3 Add automatic update trigger
     - Implement update logic on new transaction processing
     - Add monthly rollover detection
     - Ensure UI updates reflect new data
@@ -127,27 +127,27 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Enhance Pending Invoices Card with liability management
-  - [~] 9.1 Add accordion expansion to Pending Invoices Card
+  - [ ] 9.1 Add accordion expansion to Pending Invoices Card
     - Implement touch/click handler for card expansion
     - Add Framer Motion accordion animation (300ms)
     - Create ActiveLiabilities component with categorized sections
     - Display total count badge on collapsed card
     - _Requirements: 5.1, 5.2, 5.10_
 
-  - [~] 9.2 Implement liability categorization
+  - [ ] 9.2 Implement liability categorization
     - Create FixedLiabilities section for subscriptions and SaaS
     - Create VariableLiabilities section for personal debts
     - Implement data structure for both liability types
     - _Requirements: 5.3, 5.4, 5.5_
 
-  - [~] 9.3 Add urgency highlighting
+  - [ ] 9.3 Add urgency highlighting
     - Implement urgency calculation function (overdue, urgent, normal)
     - Apply red styling for overdue items (dueDate < today)
     - Apply amber styling for items due within 7 days
     - Use "old-gen" styling without bubble notifications
     - _Requirements: 5.6, 5.7, 5.8_
 
-  - [~] 9.4 Implement payment removal flow
+  - [ ] 9.4 Implement payment removal flow
     - Add payment action handler
     - Implement fade-out animation (300ms) on payment
     - Remove liability from list within 5 seconds
