@@ -1,1 +1,9 @@
-python-telegram-bot\nopenai\nrequests\nstreamlit\npandas\nplotly\nmatplotlib\npython-dotenv
+python-telegram-bot
+openai
+requests
+streamlit
+pandas
+plotly
+matplotlib
+python-dotenv
+plaid-python

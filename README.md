@@ -5,17 +5,18 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Custom ML Accuracy](https://img.shields.io/badge/ML--Accuracy-96.56%25-green.svg)](https://huggingface.co/CyberKunju/finehance-categorizer-minilm)
 
-**FineHance Omni** is an all-in-one financial assistant that turns the chore of expense tracking into a seamless conversation. By combining **Voice**, **Vision**, and **Custom Transformers**, it captures every rupee of your spending with zero friction and provides professional-grade financial insights instantly.
+**FineHance Omni** is an all-in-one financial assistant that turns the chore of expense tracking into a seamless conversation. By combining **Voice**, **Vision**, **Custom Transformers**, and **Bank Synchronization**, it captures every rupee of your spending with zero friction and provides professional-grade financial insights instantly.
 
 ---
 
 ## 🌟 The Problem
-Most people stop tracking their finances because of **friction**. Opening an app, navigating menus, and typing "₹500 - Food" takes too long. Receipts get lost, and voice notes are messy.
+Most people stop tracking their finances because of **friction**. Opening an app, navigating menus, and typing "₹500 - Food" takes too long. Receipts get lost, voice notes are messy, and manual entry often misses bank-direct transactions.
 
 ## ✅ The Solution
 FineHance Omni removes the interface entirely. 
 - **Talk to it:** Just like a friend.
 - **Show it:** Snap a photo of a receipt.
+- **Sync it:** Securely connect your real bank accounts.
 - **See it:** Get professional analytics on your phone or a dedicated web dashboard.
 
 ---
@@ -38,7 +39,13 @@ Unlike generic trackers, we use a specialized, fine-tuned **MiniLM-L6 Transforme
 - **Precision:** **96.56% Accuracy** across 23 distinct financial categories.
 - **Latency:** Ultra-fast inference (~6,600 samples/sec).
 
-### 🌍 4. South Indian Multilingual Support
+### 🏦 4. Automated Bank Sync (Plaid)
+Securely connect 12,000+ financial institutions.
+- **Real-time Reconciliation:** Matches manual logs with bank-direct transactions.
+- **Subscription Detection:** Identifies recurring "vampire" payments automatically.
+- **Net Worth Tracking:** Aggregates balances across all connected accounts.
+
+### 🌍 5. South Indian Multilingual Support
 Talk to the bot in your native language. We support:
 - **Malayalam (മലയാളം)**
 - **Tamil (தமிழ்)**
@@ -46,7 +53,7 @@ Talk to the bot in your native language. We support:
 - **Kannada (ಕನ್ನಡ)**
 - *English & Hindi (Standard)*
 
-### 📊 5. Professional Visualization & Insights
+### 📊 6. Professional Visualization & Insights
 - **In-Bot Charts:** Get instant Pie Charts directly in your Telegram chat via `/summary`.
 - **AI Insights:** Proactive advice based on spending patterns.
 - **Web Dashboard:** A real-time **Streamlit** command center for deep-dives and historical tracking.
@@ -58,6 +65,7 @@ Talk to the bot in your native language. We support:
 ```mermaid
 graph TD
     A[User Input: Voice/Image/Text] --> B[Telegram Bot]
+    P[Bank Data: Plaid API] --> I
     B --> C{Processing Layer}
     C -->|Voice| D[Wispr/Whisper API]
     C -->|Image| E[GPT-4o Vision]
@@ -94,6 +102,9 @@ OPENAI_API_KEY=your_key_here
 LLM_MODEL=gpt-4o
 TELEGRAM_BOT_TOKEN=your_token_here
 HF_TOKEN=your_hf_token_here
+PLAID_CLIENT_ID=your_plaid_id
+PLAID_SECRET=your_plaid_secret
+PLAID_ENV=sandbox
 ```
 
 ### 3. Run the Ecosystem
@@ -109,7 +120,7 @@ streamlit run dashboard/app.py
 ---
 
 ## 🏆 Hackathon Context
-**FineHance Omni** was conceptualized, built, and deployed in **8 hours**. It demonstrates the power of combining specialized custom ML models with multimodal LLM capabilities to solve a real-world utility problem.
+**FineHance Omni** was conceptualized, built, and deployed in **8 hours**. It demonstrates the power of combining specialized custom ML models with multimodal LLM capabilities and secure financial APIs to solve a real-world utility problem.
 
 ---
 
