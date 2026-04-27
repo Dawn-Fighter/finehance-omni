@@ -706,6 +706,186 @@ function MonthlySpentCard({
   );
 }
 
+// ─── Urgency Helper ─────────────────────────────────────────────────────
+function getUrgency(dueDate: Date): "overdue" | "urgent" | "normal" {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const daysUntilDue = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysUntilDue < 0) return "overdue";
+  if (daysUntilDue <= 7) return "urgent";
+  return "normal";
+}
+
+// ─── PendingInvoicesCard Component ──────────────────────────────────────
+function PendingInvoicesCard({
+  liabilities,
+  onToggle,
+  onMarkPaid,
+  fmt,
+}: {
+  liabilities: Liabilities;
+  onToggle: () => void;
+  onMarkPaid: (id: string) => void;
+  fmt: (v: number) => string;
+}) {
+  const totalCount = liabilities.fixed.length + liabilities.variable.length;
+
+  const urgencyStyles = (dueDate: Date) => {
+    const u = getUrgency(dueDate);
+    if (u === "overdue") return "border-rose-200 bg-rose-50 text-rose-700";
+    if (u === "urgent") return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-slate-100 bg-white text-slate-700";
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="group rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]"
+    >
+      {/* Clickable header */}
+      <button
+        onClick={onToggle}
+        className="flex w-full cursor-pointer flex-col p-4 text-left"
+        aria-expanded={liabilities.expanded}
+        aria-controls="pending-invoices-expansion"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            Pending Invoices
+          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="flex items-center gap-0.5 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+              {totalCount} due
+            </span>
+            <motion.span
+              animate={{ rotate: liabilities.expanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <ChevronDown size={14} className="text-slate-400" />
+            </motion.span>
+          </div>
+        </div>
+        <div className="mt-2 flex items-end justify-between gap-2">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="text-[22px] font-semibold tracking-tight tabular-nums text-slate-900"
+          >
+            $3,200.00
+          </motion.div>
+          <div className="h-9 w-20">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparkD} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="sp-Pending-Invoices" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#B45309" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#B45309" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="v" stroke="#B45309" strokeWidth={1.5} fill="url(#sp-Pending-Invoices)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </button>
+
+      {/* Accordion expansion */}
+      <AnimatePresence initial={false}>
+        {liabilities.expanded && (
+          <motion.div
+            id="pending-invoices-expansion"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-100 px-4 pb-4 pt-3 space-y-3">
+              {/* Fixed Liabilities */}
+              {liabilities.fixed.length > 0 && (
+                <div>
+                  <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">Fixed Liabilities</div>
+                  <div className="space-y-1.5">
+                    <AnimatePresence initial={false}>
+                      {liabilities.fixed.map((lib) => (
+                        <motion.div
+                          key={lib.id}
+                          initial={{ opacity: 1 }}
+                          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className={`flex items-center justify-between rounded-lg border px-3 py-2 ${urgencyStyles(lib.dueDate)}`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[12px] font-medium">{lib.name}</span>
+                              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">{lib.category}</span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-2 text-[10px] opacity-70">
+                              <span className="font-semibold tabular-nums">{fmt(lib.amount)}</span>
+                              <span>Due {lib.dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onMarkPaid(lib.id); }}
+                            className="shrink-0 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                          >
+                            Mark Paid
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+
+              {/* Variable Liabilities */}
+              {liabilities.variable.length > 0 && (
+                <div>
+                  <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">Variable Liabilities</div>
+                  <div className="space-y-1.5">
+                    <AnimatePresence initial={false}>
+                      {liabilities.variable.map((lib) => (
+                        <motion.div
+                          key={lib.id}
+                          initial={{ opacity: 1 }}
+                          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className={`flex items-center justify-between rounded-lg border px-3 py-2 ${urgencyStyles(lib.dueDate)}`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[12px] font-medium">{lib.name}</div>
+                            <div className="mt-0.5 flex items-center gap-2 text-[10px] opacity-70">
+                              <span className="font-semibold tabular-nums">{fmt(lib.amount)}</span>
+                              <span>Due {lib.dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            </div>
+                            <div className="mt-0.5 text-[10px] opacity-60">{lib.description}</div>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onMarkPaid(lib.id); }}
+                            className="shrink-0 rounded border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                          >
+                            Mark Paid
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────
 export function Dashboard() {
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -801,7 +981,7 @@ export function Dashboard() {
             <NavItem icon={<Target size={14} />} label="Budgets" collapsed={sidebarCollapsed} />
             <NavItem icon={<Briefcase size={14} />} label="Invoices" badge="2" collapsed={sidebarCollapsed} />
             <div className="my-3 h-px bg-slate-200/70" />
-            <NavItem icon={<Bot size={14} />} label="Analyst AI" collapsed={sidebarCollapsed} />
+            <NavItem icon={<Bot size={14} />} label="Monthly Summary" collapsed={sidebarCollapsed} />
             <NavItem icon={<Settings size={14} />} label="Settings" collapsed={sidebarCollapsed} />
           </nav>
 
@@ -881,7 +1061,18 @@ export function Dashboard() {
                 onViewFullHistory={() => setDeepLedgerVisible(true)}
               />
               <Stat title="Revenue MTD" value="$8,500.00" trend="+18.2%" up data={sparkC} accent="#059669" />
-              <Stat title="Pending Invoices" value="$3,200.00" trend="2 due" data={sparkD} accent="#B45309" muted />
+              <PendingInvoicesCard
+                liabilities={liabilities}
+                onToggle={() => setLiabilities((prev) => ({ ...prev, expanded: !prev.expanded }))}
+                onMarkPaid={(id) => {
+                  setLiabilities((prev) => ({
+                    ...prev,
+                    fixed: prev.fixed.filter((l) => l.id !== id),
+                    variable: prev.variable.filter((l) => l.id !== id),
+                  }));
+                }}
+                fmt={fmt}
+              />
             </div>
 
             {/* Grid */}
@@ -1060,7 +1251,7 @@ export function Dashboard() {
 
               {/* Right rail */}
               <div className="space-y-5">
-                {/* Telegram */}
+                {/* Bot Hub */}
                 <Panel>
                   <div className="mb-3 flex items-start justify-between">
                     <div className="flex items-center gap-2">
@@ -1069,7 +1260,7 @@ export function Dashboard() {
                       </div>
                       <div>
                         <div className="text-[13px] font-semibold">Telegram Bot</div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Quick capture</div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Bot Hub</div>
                       </div>
                     </div>
                     {telegramLinked ? (
@@ -1081,104 +1272,99 @@ export function Dashboard() {
                     )}
                   </div>
 
-                  {!telegramLinked ? (
-                    <>
-                      <p className="mb-3 text-[12px] leading-relaxed text-slate-500">
-                        Voice memos via Whisper, receipts via GPT-4o Vision, or one-line text logs.
-                      </p>
-                      <div className="mb-3 rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
-                        <div className="mb-1 text-[9px] font-medium uppercase tracking-wider text-slate-400">Deep-link token</div>
-                        <div className="flex items-center justify-between gap-2">
-                          <code className="truncate rounded border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-800">
-                            /start {telegramToken}
-                          </code>
-                          <button onClick={copyToken} className="flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:text-slate-900">
-                            {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-                            {copied ? "Copied" : "Copy"}
-                          </button>
-                        </div>
-                      </div>
-                      <a
-                        href={`https://t.me/Finehance_bot?start=${telegramToken}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() => setTimeout(() => setTelegramLinked(true), 1500)}
-                        className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 py-2 text-[12px] font-medium text-white transition hover:bg-slate-700"
-                      >
-                        <Send size={12} /> Open in Telegram
-                      </a>
-                      <div className="mt-3 grid grid-cols-3 gap-1.5">
-                        <Capability icon={<Mic size={11} />} label="Voice" />
-                        <Capability icon={<Receipt size={11} />} label="Receipt" />
-                        <Capability icon={<MessageSquare size={11} />} label="Text" />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="py-3 text-center">
-                      <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
-                        <CheckCircle2 size={20} />
-                      </div>
-                      <div className="text-[13px] font-medium">Connected</div>
-                      <p className="mx-auto mt-1 max-w-[220px] text-[11px] text-slate-500">
-                        Try: "Spent $12 on lunch" — voice or text.
-                      </p>
+                  {telegramLinked && (
+                    <div className="mb-3 flex items-center justify-center gap-2 rounded-lg bg-emerald-50 py-2 text-[12px] font-medium text-emerald-700 ring-1 ring-emerald-100">
+                      <CheckCircle2 size={14} /> Connected
                     </div>
                   )}
+
+                  <button
+                    onClick={() => {
+                      window.open(`https://t.me/Finehance_bot?start=${telegramToken}`, "_blank");
+                      if (!telegramLinked) setTimeout(() => setTelegramLinked(true), 1500);
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 py-2.5 text-[12px] font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    <Send size={13} /> EXECUTE BOT COMMANDS
+                  </button>
                 </Panel>
 
-                {/* Analyst AI */}
-                <Panel padding="0" className="flex h-[440px] flex-col">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                {/* Monthly Summary */}
+                <Panel>
+                  <div className="mb-4 flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-white">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600">
                         <Sparkles size={12} />
                       </div>
                       <div>
-                        <div className="text-[13px] font-semibold">Analyst AI</div>
-                        <div className="text-[10px] text-slate-400">Streaming insights</div>
+                        <div className="text-[13px] font-semibold">Monthly Summary</div>
+                        <div className="text-[10px] text-slate-400">April 2026</div>
                       </div>
                     </div>
-                    <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">GPT-4o</span>
                   </div>
 
-                  <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-b from-white to-slate-50/40 p-4">
-                    <AnimatePresence initial={false}>
-                      {insights.map(ins => (
-                        <motion.div
-                          key={ins.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="rounded-lg border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ins.type === "alert" ? "bg-amber-500" : ins.type === "success" ? "bg-emerald-500" : "bg-sky-500"}`} />
-                            <div className="min-w-0 flex-1">
-                              <div className="mb-0.5 flex items-center justify-between gap-2">
-                                <h4 className="truncate text-[12px] font-semibold text-slate-900">{ins.title}</h4>
-                                <span className="text-[10px] text-slate-400">{ins.time}</span>
-                              </div>
-                              <p className="text-[11.5px] leading-relaxed text-slate-600">{ins.content}</p>
-                              <button className="mt-2 inline-flex items-center gap-1 text-[10.5px] font-medium text-slate-700 hover:text-slate-900">
-                                {ins.action} <ArrowRight size={10} />
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-
-                  <div className="border-t border-slate-100 bg-white p-3">
-                    <div className="relative">
-                      <Sparkles size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        placeholder="Ask the analyst…"
-                        className="h-8 w-full rounded-md border border-slate-200 bg-slate-50/60 pl-7 pr-9 text-[12px] placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:outline-none"
-                      />
-                      <button className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded bg-slate-900 text-white">
-                        <Send size={10} />
-                      </button>
+                  <div className="space-y-4">
+                    {/* Net Cashflow */}
+                    <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5">
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Net Cashflow</div>
+                      <div className={`mt-1 text-lg font-semibold tabular-nums ${monthlySummary.netCashflow >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {fmt(monthlySummary.netCashflow)}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        Cash flow is{" "}
+                        <span className={`font-semibold ${monthlySummary.comparisonToPreviousMonth.cashflowChange >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                          {Math.abs(monthlySummary.comparisonToPreviousMonth.cashflowChange)}%{" "}
+                          {monthlySummary.comparisonToPreviousMonth.cashflowChange >= 0 ? "higher" : "lower"}
+                        </span>{" "}
+                        than March
+                      </div>
                     </div>
+
+                    {/* Spending Breakdown */}
+                    <div>
+                      <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-slate-400">Top Categories</div>
+                      <div className="space-y-1.5">
+                        {Object.entries(monthlySummary.categoryBreakdown)
+                          .sort(([, a], [, b]) => b - a)
+                          .slice(0, 4)
+                          .map(([category, amount]) => (
+                            <div key={category} className="flex items-center justify-between text-[11px]">
+                              <span className="text-slate-600">{category}</span>
+                              <span className="font-semibold tabular-nums text-slate-900">{fmt(amount)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Anomalies */}
+                    {monthlySummary.anomalies.length > 0 && (
+                      <div>
+                        <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-slate-400">Anomalies</div>
+                        <div className="space-y-2">
+                          {monthlySummary.anomalies.map((anomaly, i) => (
+                            <div
+                              key={i}
+                              className={`rounded-lg border px-3 py-2 text-[11px] ${
+                                anomaly.severity === "high"
+                                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                                  : anomaly.severity === "medium"
+                                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                                    : "border-slate-200 bg-slate-50 text-slate-600"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                                  anomaly.severity === "high" ? "bg-rose-500" : anomaly.severity === "medium" ? "bg-amber-500" : "bg-slate-400"
+                                }`} />
+                                <span className="font-semibold">{anomaly.category}</span>
+                                <span className="text-[10px] opacity-70">+{anomaly.percentageChange}%</span>
+                              </div>
+                              <p className="mt-0.5 leading-relaxed opacity-80">{anomaly.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Panel>
               </div>
