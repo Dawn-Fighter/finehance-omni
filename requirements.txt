@@ -1,12 +1,15 @@
-python-telegram-bot
-openai
-requests
-streamlit
-pandas
-plotly
-matplotlib
-python-dotenv
-requests
-transformers
-torch
-safetensors
+python-telegram-bot>=21
+openai>=1.30
+requests>=2.31
+streamlit>=1.30
+pandas>=2.0
+plotly>=5.18
+matplotlib>=3.7
+python-dotenv>=1.0
+transformers>=4.40
+torch>=2.0
+safetensors>=0.4
+
+# Setu Account Aggregator webhook server
+fastapi>=0.110
+uvicorn[standard]>=0.29
