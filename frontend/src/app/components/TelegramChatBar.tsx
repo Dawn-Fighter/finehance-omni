@@ -43,7 +43,7 @@ export default function TelegramChatBar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.97 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className={`absolute bottom-[56px] left-0 right-0 flex flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_-8px_40px_rgba(15,23,42,0.08)] ${
+            className={`absolute bottom-[56px] left-0 right-0 flex flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_-4px_24px_rgba(15,23,42,0.06)] ${
               isExpanded ? "h-[500px]" : "h-[320px]"
             } transition-[height] duration-200`}
           >
@@ -128,7 +128,7 @@ export default function TelegramChatBar() {
       </AnimatePresence>
 
       {/* Chat Input Bar */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] focus-within:border-indigo-500/30 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:shadow-[0_4px_16px_rgba(99,102,241,0.06)]">
         <Sparkles size={14} className="shrink-0 text-indigo-500" />
         <input
           ref={inputRef}

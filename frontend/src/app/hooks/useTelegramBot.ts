@@ -46,7 +46,7 @@ export function useTelegramBot(): TelegramBotResult {
             lastUpdateId.current = update.update_id;
             const msg = update.message || update.channel_post;
             if (msg && String(msg.chat.id) === String(CHAT_ID)) {
-              if (msg.from?.is_bot || msg.text?.startsWith("💰")) continue;
+              if (msg.from?.is_bot) continue;
 
               setMessages((prev) => [
                 ...prev,
@@ -105,7 +105,7 @@ export function useTelegramBot(): TelegramBotResult {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: CHAT_ID,
-            text: `💰 Finehance Query: ${text}`,
+            text: `Finehance Query: ${text}`,
             parse_mode: "Markdown",
           }),
         });

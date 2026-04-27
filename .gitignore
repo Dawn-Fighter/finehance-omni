@@ -1,1 +1,6 @@
 .env\ndata/expenses.json\nassets/*.png\n__pycache__/\n*.pyc
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules

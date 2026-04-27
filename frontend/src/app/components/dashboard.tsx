@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import InsightsPanel from "./InsightsPanel";
 import TelegramChatBar from "./TelegramChatBar";
+import { Outlet, useLocation, NavLink } from "react-router";
 
 // ─── TypeScript Interfaces ──────────────────────────────────────────────
 interface UserProfile {
@@ -888,6 +889,21 @@ function PendingInvoicesCard({
 
 // ─── Component ──────────────────────────────────────────────────────────
 export function Dashboard() {
+  const location = useLocation();
+  
+  const pageTitle = useMemo(() => {
+    switch (location.pathname) {
+      case "/":
+      case "/overview": return "Overview";
+      case "/transactions": return "Transactions";
+      case "/analytics": return "Analytics";
+      case "/budgets": return "Budgets";
+      case "/invoices": return "Invoices";
+      case "/monthly-summary": return "Monthly Summary";
+      case "/settings": return "Settings";
+      default: return "Overview";
+    }
+  }, [location.pathname]);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [insights, setInsights] = useState(initialInsights);
   const [telegramLinked, setTelegramLinked] = useState(false);
@@ -975,35 +991,17 @@ export function Dashboard() {
           </button>
 
           <nav className="flex flex-col gap-0.5 text-[13px]">
-            <NavItem icon={<LayoutDashboard size={14} />} label="Overview" active collapsed={sidebarCollapsed} />
-            <NavItem icon={<ArrowLeftRight size={14} />} label="Transactions" badge="142" collapsed={sidebarCollapsed} />
-            <NavItem icon={<PieChart size={14} />} label="Analytics" collapsed={sidebarCollapsed} />
-            <NavItem icon={<Target size={14} />} label="Budgets" collapsed={sidebarCollapsed} />
-            <NavItem icon={<Briefcase size={14} />} label="Invoices" badge="2" collapsed={sidebarCollapsed} />
+            <NavItem icon={<LayoutDashboard size={14} />} label="Overview" to="/" collapsed={sidebarCollapsed} />
+            <NavItem icon={<ArrowLeftRight size={14} />} label="Transactions" to="/transactions" badge="142" collapsed={sidebarCollapsed} />
+            <NavItem icon={<PieChart size={14} />} label="Analytics" to="/analytics" collapsed={sidebarCollapsed} />
+            <NavItem icon={<Target size={14} />} label="Budgets" to="/budgets" collapsed={sidebarCollapsed} />
+            <NavItem icon={<Briefcase size={14} />} label="Invoices" to="/invoices" badge="2" collapsed={sidebarCollapsed} />
             <div className="my-3 h-px bg-slate-200/70" />
-            <NavItem icon={<Bot size={14} />} label="Monthly Summary" collapsed={sidebarCollapsed} />
-            <NavItem icon={<Settings size={14} />} label="Settings" collapsed={sidebarCollapsed} />
+            <NavItem icon={<Sparkles size={14} />} label="Monthly Summary" to="/monthly-summary" collapsed={sidebarCollapsed} />
+            <NavItem icon={<Settings size={14} />} label="Settings" to="/settings" collapsed={sidebarCollapsed} />
           </nav>
 
-          {!sidebarCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="mt-auto rounded-lg border border-slate-200 bg-white p-3"
-            >
-              <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                </span>
-                Bot streaming
-              </div>
-              <p className="mt-1 text-[11px] leading-snug text-slate-500">
-                Whisper + GPT-4o Vision pipelines online.
-              </p>
-            </motion.div>
-          )}
+
         </motion.aside>
 
         {/* ─── Main column ─── */}
@@ -1014,7 +1012,7 @@ export function Dashboard() {
               <div className="flex items-center gap-2 text-[13px] text-slate-500">
                 <span className="text-slate-400">Workspace</span>
                 <ChevronRight size={12} className="text-slate-300" />
-                <span className="font-medium text-slate-900">Overview</span>
+                <span className="font-medium text-slate-900">{pageTitle}</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -1044,6 +1042,8 @@ export function Dashboard() {
           </header>
 
           <main className="px-6 pb-24 py-6">
+            {(location.pathname === "/" || location.pathname === "/overview") ? (
+              <>
             {/* KPI strip */}
             <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Stat title="Total Balance" value="$16,618.00" trend="+12.5%" up data={sparkA} accent="#0F172A" />
@@ -1259,8 +1259,8 @@ export function Dashboard() {
                         <Sparkles size={13} />
                       </div>
                       <div>
-                        <div className="text-[13px] font-semibold">Vivien</div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400">AI Assistant</div>
+                        <div className="text-[13px] font-semibold">Vivien Insights</div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Personalized recommendations</div>
                       </div>
                     </div>
                     <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-100">
@@ -1272,23 +1272,32 @@ export function Dashboard() {
                     </span>
                   </div>
 
-                  <p className="mb-3 text-[12px] leading-relaxed text-slate-500">
-                    Ask about your finances, spending patterns, or get personalized recommendations.
+                  <p className="mb-4 text-[12px] leading-relaxed text-slate-500">
+                    Proactive strategies to optimize your cash flow and reduce unnecessary expenditures this month.
                   </p>
 
-                  <div className="space-y-2">
-                    <button className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-[11px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
-                      <ArrowRight size={10} className="shrink-0 text-indigo-500" />
-                      Show my spending forecast
-                    </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-[11px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
-                      <ArrowRight size={10} className="shrink-0 text-indigo-500" />
-                      Where can I save money?
-                    </button>
-                    <button className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-[11px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
-                      <ArrowRight size={10} className="shrink-0 text-indigo-500" />
-                      Review my subscriptions
-                    </button>
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-slate-200/60 bg-indigo-50/30 p-3 transition hover:border-indigo-200">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                        <span className="text-[11px] font-semibold text-slate-900">Spending Forecast</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mb-2 leading-relaxed">Your projected spend is on track to be 12% lower than last month.</p>
+                      <button className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-600 hover:text-indigo-700">
+                        View details <ArrowRight size={10} />
+                      </button>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-200/60 bg-amber-50/30 p-3 transition hover:border-amber-200">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <span className="text-[11px] font-semibold text-slate-900">Savings Opportunity</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mb-2 leading-relaxed">We identified $145 in redundant SaaS subscriptions.</p>
+                      <button className="flex items-center gap-1.5 text-[10px] font-medium text-amber-600 hover:text-amber-700">
+                        Review subscriptions <ArrowRight size={10} />
+                      </button>
+                    </div>
                   </div>
                 </Panel>
 
@@ -1372,6 +1381,10 @@ export function Dashboard() {
                 </Panel>
               </div>
             </div>
+            </>
+            ) : (
+              <Outlet />
+            )}
           </main>
         </div>
       </div>
@@ -1432,22 +1445,38 @@ export function Dashboard() {
 }
 
 // ─── Subcomponents ──────────────────────────────────────────────────────
-function NavItem({ icon, label, active, badge, collapsed }: { icon: React.ReactNode, label: string, active?: boolean, badge?: string, collapsed?: boolean }) {
+function NavItem({ icon, label, badge, collapsed, to }: { icon: React.ReactNode, label: string, badge?: string, collapsed?: boolean, to?: string }) {
+  const destination = to || "#";
   return (
-    <motion.a
-      href="#"
-      whileHover={{ x: collapsed ? 0 : 2 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.15 }}
-      className={`flex items-center rounded-md px-2.5 py-1.5 transition-colors ${collapsed ? "justify-center" : "justify-between"} ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"}`}
+    <NavLink
+      to={destination}
+      className={({ isActive }) => `flex items-center rounded-md px-2.5 py-1.5 transition-colors ${
+        collapsed ? "justify-center" : "justify-between"
+      } ${
+        isActive 
+          ? "bg-slate-900 text-white" 
+          : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
+      }`}
       title={collapsed ? label : undefined}
     >
-      <span className={`flex items-center gap-2.5 ${collapsed ? "" : ""}`}>
-        <span className={active ? "text-white" : "text-slate-400"}>{icon}</span>
-        {!collapsed && label}
-      </span>
-      {badge && !collapsed && <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${active ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"}`}>{badge}</span>}
-    </motion.a>
+      {({ isActive }) => (
+        <>
+          <span className={`flex items-center gap-2.5 ${collapsed ? "" : ""}`}>
+            <span className={isActive ? "text-white" : "text-slate-400"}>
+              {icon}
+            </span>
+            {!collapsed && <span className="text-[12px] font-medium tracking-wide">{label}</span>}
+          </span>
+          {badge && !collapsed && (
+            <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              isActive ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"
+            }`}>
+              {badge}
+            </span>
+          )}
+        </>
+      )}
+    </NavLink>
   );
 }
 
