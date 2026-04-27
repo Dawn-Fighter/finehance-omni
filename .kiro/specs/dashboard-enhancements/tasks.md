@@ -58,7 +58,7 @@ This implementation plan transforms the Finehance dashboard by adding personaliz
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement DeepLedger and GhostTable
-  - [-] 5.1 Create DeepLedger modal/full-page view
+  - [x] 5.1 Create DeepLedger modal/full-page view
     - Build modal or full-page container with close functionality
     - Add filter and search controls at top
     - Implement state management for deepLedgerVisible
