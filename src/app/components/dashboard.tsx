@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -9,9 +9,104 @@ import {
   TrendingUp, Wallet, Target, MessageSquare, Mic, Receipt,
   ArrowRight, CheckCircle2, Sparkles, Bot, Send, Command,
   LayoutDashboard, ArrowLeftRight, PieChart, Settings,
-  CircleDollarSign, Zap, Copy, Check, ChevronRight,
-  Coffee, ShoppingBag, Building2, Briefcase, Cloud, Menu
+  Zap, Copy, Check, ChevronRight, ChevronDown,
+  Coffee, ShoppingBag, Building2, Briefcase, Cloud, Calendar,
+  X
 } from "lucide-react";
+
+// ─── TypeScript Interfaces ──────────────────────────────────────────────
+interface UserProfile {
+  userId: string;
+  coverPhotoUrl: string | null;
+  systemIdentifier: string;
+  displayName: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface WeeklySpending {
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  total: number;
+  transactionCount: number;
+  topCategories: { category: string; amount: number }[];
+}
+
+interface MonthlySpending {
+  month: string;
+  total: number;
+  weeks: WeeklySpending[];
+  expanded: boolean;
+}
+
+interface TransactionExtended {
+  id: string;
+  dateTime: Date;
+  category: string;
+  originEntity: string;
+  destinationEntity: string;
+  amount: number;
+  status: "completed" | "pending" | "processing" | "failed";
+  source: "auto" | "telegram" | "receipt" | "manual";
+  metadata?: Record<string, any>;
+}
+
+interface MonthData {
+  totalSpent: number;
+  totalIncome: number;
+  netCashflow: number;
+  categoryBreakdown: Record<string, number>;
+}
+
+interface Anomaly {
+  type: "increase" | "decrease" | "spike" | "leak";
+  category: string;
+  percentageChange: number;
+  description: string;
+  severity: "low" | "medium" | "high";
+}
+
+interface MonthlySummary {
+  month: string;
+  totalSpent: number;
+  totalIncome: number;
+  netCashflow: number;
+  categoryBreakdown: Record<string, number>;
+  comparisonToPreviousMonth: {
+    spentChange: number;
+    incomeChange: number;
+    cashflowChange: number;
+  };
+  anomalies: Anomaly[];
+  generatedAt: Date;
+}
+
+interface FixedLiability {
+  id: string;
+  name: string;
+  amount: number;
+  dueDate: Date;
+  recurring: boolean;
+  frequency?: "monthly" | "quarterly" | "annual";
+  category: "software" | "saas" | "subscription" | "utility";
+  autoPayEnabled: boolean;
+}
+
+interface VariableLiability {
+  id: string;
+  name: string;
+  amount: number;
+  dueDate: Date;
+  description: string;
+  contactInfo?: string;
+}
+
+interface Liabilities {
+  fixed: FixedLiability[];
+  variable: VariableLiability[];
+  expanded: boolean;
+}
 
 // ─── Mock Data ──────────────────────────────────────────────────────────
 const initialTransactions = [
@@ -56,6 +151,559 @@ const sparkB = [8, 9, 7, 10, 11, 9, 8, 7].map((v, i) => ({ i, v }));
 const sparkC = [4, 6, 5, 7, 8, 9, 11, 13].map((v, i) => ({ i, v }));
 const sparkD = [3, 3, 4, 4, 3, 5, 5, 4].map((v, i) => ({ i, v }));
 
+// Mock data for new features
+const mockUserProfile: UserProfile = {
+  userId: "user_001",
+  coverPhotoUrl: null,
+  systemIdentifier: "@kashy_fin",
+  displayName: "Jordan",
+  createdAt: new Date("2025-01-15"),
+  updatedAt: new Date(),
+};
+
+const mockWeeklySpending: WeeklySpending[] = [
+  { weekNumber: 17, startDate: "2026-04-20", endDate: "2026-04-26", total: 842.50, transactionCount: 12, topCategories: [{ category: "Dining", amount: 247 }] },
+  { weekNumber: 16, startDate: "2026-04-13", endDate: "2026-04-19", total: 1200.00, transactionCount: 8, topCategories: [{ category: "Infrastructure", amount: 1240 }] },
+  { weekNumber: 15, startDate: "2026-04-06", endDate: "2026-04-12", total: 800.00, transactionCount: 15, topCategories: [{ category: "Software", amount: 315 }] },
+];
+
+const mockMonthlySummary: MonthlySummary = {
+  month: "2026-04",
+  totalSpent: 2842.50,
+  totalIncome: 8500.00,
+  netCashflow: 5657.50,
+  categoryBreakdown: {
+    Infrastructure: 1240,
+    Software: 315,
+    Dining: 247,
+    Travel: 180,
+    Other: 95,
+  },
+  comparisonToPreviousMonth: {
+    spentChange: -2.4,
+    incomeChange: 18.2,
+    cashflowChange: 12.5,
+  },
+  anomalies: [
+    {
+      type: "spike",
+      category: "Infrastructure",
+      percentageChange: 40,
+      description: "AWS bill is 40% higher than last month",
+      severity: "high",
+    },
+  ],
+  generatedAt: new Date(),
+};
+
+const mockLiabilities: Liabilities = {
+  fixed: [
+    {
+      id: "lib_001",
+      name: "Stripe",
+      amount: 299.00,
+      dueDate: new Date("2026-05-01"),
+      recurring: true,
+      frequency: "monthly",
+      category: "software",
+      autoPayEnabled: true,
+    },
+    {
+      id: "lib_002",
+      name: "AWS Services",
+      amount: 1240.20,
+      dueDate: new Date("2026-04-30"),
+      recurring: true,
+      frequency: "monthly",
+      category: "saas",
+      autoPayEnabled: false,
+    },
+    {
+      id: "lib_003",
+      name: "Notion Labs",
+      amount: 16.00,
+      dueDate: new Date("2026-04-28"),
+      recurring: true,
+      frequency: "monthly",
+      category: "subscription",
+      autoPayEnabled: true,
+    },
+  ],
+  variable: [
+    {
+      id: "lib_004",
+      name: "John Doe",
+      amount: 500.00,
+      dueDate: new Date("2026-04-25"),
+      description: "Dinner split from last week",
+      contactInfo: "john@example.com",
+    },
+    {
+      id: "lib_005",
+      name: "Sarah Chen",
+      amount: 1144.80,
+      dueDate: new Date("2026-05-05"),
+      description: "Conference ticket reimbursement",
+      contactInfo: "+1 555-0123",
+    },
+  ],
+  expanded: false,
+};
+
+// ─── UserProfileSuite Component ─────────────────────────────────────────
+function UserProfileSuite({ profile, onEditProfile }: { profile: UserProfile; onEditProfile: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="relative mb-6 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+    >
+      {/* Cover Photo */}
+      <div className="relative h-32 w-full overflow-hidden">
+        {profile.coverPhotoUrl ? (
+          <img
+            src={profile.coverPhotoUrl}
+            alt="Cover"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+      </div>
+
+      {/* Profile Info */}
+      <div className="relative -mt-6 px-5 pb-4">
+        <div className="flex items-end gap-3">
+          {/* Avatar placeholder */}
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border-2 border-white bg-slate-900 text-white shadow-lg">
+            <span className="text-xl font-bold">{profile.displayName.charAt(0)}</span>
+          </div>
+
+          <div className="min-w-0 flex-1 pb-1">
+            <div className="flex items-center gap-2">
+              <h2
+                onClick={onEditProfile}
+                className="cursor-pointer text-lg font-semibold tracking-tight text-slate-900 transition hover:text-slate-700"
+              >
+                {profile.displayName}
+              </h2>
+              <button
+                onClick={onEditProfile}
+                className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                title="Edit profile"
+              >
+                <Settings size={12} />
+              </button>
+            </div>
+            <div className="mt-0.5 font-mono text-[11px] text-slate-500">
+              {profile.systemIdentifier}
+            </div>
+          </div>
+
+          {/* Terminal indicator */}
+          <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-600">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            TERMINAL ACTIVE
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── WeeklyBreakdown Component ──────────────────────────────────────────
+function WeeklyBreakdown({
+  weeks,
+  onViewFullHistory,
+}: {
+  weeks: WeeklySpending[];
+  onViewFullHistory: () => void;
+}) {
+  const fmt = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+
+  const formatDateRange = (start: string, end: string) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    const mo = (d: Date) => d.toLocaleString("en-US", { month: "short" });
+    return `${mo(s)} ${s.getDate()} – ${mo(e)} ${e.getDate()}`;
+  };
+
+  const maxTotal = Math.max(...weeks.map((w) => w.total), 1);
+
+  return (
+    <div className="space-y-2">
+      {weeks.map((week) => (
+        <div
+          key={week.weekNumber}
+          className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2.5"
+        >
+          <div className="flex items-center justify-between text-[11px]">
+            <div className="flex items-center gap-2 text-slate-600">
+              <Calendar size={11} className="text-slate-400" />
+              <span className="font-medium">Week {week.weekNumber}</span>
+              <span className="text-slate-400">
+                {formatDateRange(week.startDate, week.endDate)}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-slate-400">
+                {week.transactionCount} txns
+              </span>
+              <span className="font-semibold tabular-nums text-slate-900">
+                {fmt(week.total)}
+              </span>
+            </div>
+          </div>
+          {/* Mini bar */}
+          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-200/60">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${(week.total / maxTotal) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="h-full rounded-full bg-slate-900"
+            />
+          </div>
+        </div>
+      ))}
+
+      <button
+        onClick={onViewFullHistory}
+        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white py-2 text-[11px] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+      >
+        View Full History <ArrowRight size={11} />
+      </button>
+    </div>
+  );
+}
+
+// ─── Mock Deep Ledger Transactions ──────────────────────────────────────
+const deepLedgerCategories = ["Infrastructure", "Software", "Dining", "Travel", "Coffee", "Shopping", "Income", "Utilities", "Entertainment", "Health"];
+const deepLedgerOrigins = ["Jordan K.", "Acme Corp", "System Auto", "Telegram Bot", "Receipt Scan", "Manual Entry"];
+const deepLedgerDestinations = ["AWS", "Stripe", "Notion Labs", "Uber Eats", "Starbucks", "Netflix", "Spotify", "GitHub", "Vercel", "DigitalOcean", "Google Cloud", "Slack", "Figma", "Linear", "Postman", "DoorDash", "Whole Foods", "Target", "Delta Airlines", "Hilton Hotels"];
+const deepLedgerStatuses: TransactionExtended["status"][] = ["completed", "pending", "processing", "failed"];
+const deepLedgerSources: TransactionExtended["source"][] = ["auto", "telegram", "receipt", "manual"];
+
+function generateMockTransactions(count: number): TransactionExtended[] {
+  const txns: TransactionExtended[] = [];
+  const now = new Date();
+  for (let i = 0; i < count; i++) {
+    const daysAgo = Math.floor(Math.random() * 365);
+    const dt = new Date(now.getTime() - daysAgo * 86400000 - Math.random() * 86400000);
+    const cat = deepLedgerCategories[i % deepLedgerCategories.length];
+    const isIncome = cat === "Income";
+    txns.push({
+      id: `dl_${String(i).padStart(4, "0")}`,
+      dateTime: dt,
+      category: cat,
+      originEntity: isIncome ? deepLedgerDestinations[i % deepLedgerDestinations.length] : deepLedgerOrigins[i % deepLedgerOrigins.length],
+      destinationEntity: isIncome ? deepLedgerOrigins[i % deepLedgerOrigins.length] : deepLedgerDestinations[i % deepLedgerDestinations.length],
+      amount: isIncome ? +(Math.random() * 5000 + 500).toFixed(2) : -(Math.random() * 1500 + 5).toFixed(2) as unknown as number,
+      status: deepLedgerStatuses[i % deepLedgerStatuses.length],
+      source: deepLedgerSources[i % deepLedgerSources.length],
+    });
+  }
+  return txns.sort((a, b) => b.dateTime.getTime() - a.dateTime.getTime());
+}
+
+const mockDeepLedgerTransactions = generateMockTransactions(60);
+
+// ─── GhostTable Component ───────────────────────────────────────────────
+function GhostTable({ transactions }: { transactions: TransactionExtended[] }) {
+  const fmt = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v);
+
+  const fmtDate = (d: Date) => {
+    const date = new Date(d);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+      " " + date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const statusColor: Record<string, string> = {
+    completed: "text-emerald-400",
+    pending: "text-amber-400",
+    processing: "text-sky-400",
+    failed: "text-rose-400",
+  };
+
+  return (
+    <div className="overflow-x-auto overflow-y-auto max-h-[60vh] rounded-lg border border-slate-700/50">
+      <table className="w-full min-w-[800px] text-left font-mono text-[11px]">
+        <thead className="sticky top-0 z-10 border-b border-slate-700/60 bg-slate-900/95 backdrop-blur-sm">
+          <tr>
+            <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-400">Date/Time</th>
+            <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-400">Category</th>
+            <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-400">Origin</th>
+            <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-400">Destination</th>
+            <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-slate-400">Amount</th>
+            <th className="px-4 py-3 font-semibold uppercase tracking-wider text-slate-400">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-800/40">
+          {transactions.map((tx) => (
+            <tr
+              key={tx.id}
+              className="opacity-40 transition-opacity hover:opacity-80"
+            >
+              <td className="whitespace-nowrap px-4 py-2.5 text-slate-300">{fmtDate(tx.dateTime)}</td>
+              <td className="px-4 py-2.5 text-slate-300">{tx.category}</td>
+              <td className="px-4 py-2.5 text-slate-300">{tx.originEntity}</td>
+              <td className="px-4 py-2.5 text-slate-300">{tx.destinationEntity}</td>
+              <td className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${tx.amount > 0 ? "text-emerald-400" : "text-slate-300"}`}>
+                {tx.amount > 0 ? "+" : ""}{fmt(tx.amount)}
+              </td>
+              <td className={`px-4 py-2.5 uppercase tracking-wider ${statusColor[tx.status] || "text-slate-400"}`}>
+                {tx.status}
+              </td>
+            </tr>
+          ))}
+          {transactions.length === 0 && (
+            <tr>
+              <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                No transactions match your search.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── DeepLedger Component ───────────────────────────────────────────────
+function DeepLedger({
+  transactions,
+  onClose,
+}: {
+  transactions: TransactionExtended[];
+  onClose: () => void;
+}) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  const categories = useMemo(() => {
+    const cats = new Set(transactions.map((t) => t.category));
+    return ["all", ...Array.from(cats).sort()];
+  }, [transactions]);
+
+  const filtered = useMemo(() => {
+    let result = transactions;
+    if (categoryFilter !== "all") {
+      result = result.filter((t) => t.category === categoryFilter);
+    }
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.category.toLowerCase().includes(q) ||
+          t.originEntity.toLowerCase().includes(q) ||
+          t.destinationEntity.toLowerCase().includes(q) ||
+          t.status.toLowerCase().includes(q) ||
+          t.amount.toString().includes(q)
+      );
+    }
+    return result;
+  }, [transactions, categoryFilter, debouncedSearch]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex flex-col bg-slate-950/95 backdrop-blur-md"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+        <div>
+          <h2 className="font-mono text-lg font-semibold text-slate-100">
+            Deep Ledger
+          </h2>
+          <p className="mt-0.5 font-mono text-[11px] text-slate-500">
+            {filtered.length} of {transactions.length} transactions · full history
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 text-slate-400 transition hover:border-slate-600 hover:text-slate-200"
+          aria-label="Close Deep Ledger"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Filter / Search controls */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-800/60 px-6 py-3">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="Search transactions…"
+            className="h-8 w-full rounded-md border border-slate-700 bg-slate-900 pl-8 pr-3 font-mono text-[12px] text-slate-200 placeholder:text-slate-600 focus:border-slate-500 focus:outline-none"
+          />
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="h-8 rounded-md border border-slate-700 bg-slate-900 px-3 font-mono text-[12px] text-slate-300 focus:border-slate-500 focus:outline-none"
+        >
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat === "all" ? "All Categories" : cat}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* GhostTable */}
+      <div className="flex-1 overflow-hidden px-6 py-4">
+        <GhostTable transactions={filtered} />
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── MonthlySpentCard Component ─────────────────────────────────────────
+function MonthlySpentCard({
+  value,
+  trend,
+  data,
+  spending,
+  onToggle,
+  onViewFullHistory,
+}: {
+  value: string;
+  trend: string;
+  data: { i: number; v: number }[];
+  spending: MonthlySpending;
+  onToggle: () => void;
+  onViewFullHistory: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="group rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]"
+    >
+      {/* Clickable header */}
+      <button
+        onClick={onToggle}
+        className="flex w-full cursor-pointer flex-col p-4 text-left"
+        aria-expanded={spending.expanded}
+        aria-controls="monthly-spent-expansion"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            Monthly Spent
+          </span>
+          <div className="flex items-center gap-1.5">
+            <motion.span
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+              className="flex items-center gap-0.5 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700"
+            >
+              <ArrowDownRight size={9} />
+              {trend}
+            </motion.span>
+            <motion.span
+              animate={{ rotate: spending.expanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <ChevronDown size={14} className="text-slate-400" />
+            </motion.span>
+          </div>
+        </div>
+        <div className="mt-2 flex items-end justify-between gap-2">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="text-[22px] font-semibold tracking-tight tabular-nums text-slate-900"
+          >
+            {value}
+          </motion.div>
+          <div className="h-9 w-20">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="sp-Monthly-Spent" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0F172A" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#0F172A" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="v"
+                  stroke="#0F172A"
+                  strokeWidth={1.5}
+                  fill="url(#sp-Monthly-Spent)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </button>
+
+      {/* Accordion expansion */}
+      <AnimatePresence initial={false}>
+        {spending.expanded && (
+          <motion.div
+            id="monthly-spent-expansion"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+              <WeeklyBreakdown
+                weeks={spending.weeks}
+                onViewFullHistory={onViewFullHistory}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────
 export function Dashboard() {
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -65,6 +713,19 @@ export function Dashboard() {
   const [range, setRange] = useState("1W");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const telegramToken = "tg_auth_9x8f2p";
+
+  // New state slices for dashboard enhancements
+  const [userProfile, setUserProfile] = useState<UserProfile>(mockUserProfile);
+  const [monthlySpending, setMonthlySpending] = useState<MonthlySpending>({
+    month: "2026-04",
+    total: 2842.50,
+    weeks: mockWeeklySpending,
+    expanded: false,
+  });
+  const [deepLedgerVisible, setDeepLedgerVisible] = useState(false);
+  const [liabilities, setLiabilities] = useState<Liabilities>(mockLiabilities);
+  const [monthlySummary, setMonthlySummary] = useState<MonthlySummary>(mockMonthlySummary);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -113,10 +774,11 @@ export function Dashboard() {
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-slate-200/70 bg-white/60 px-3 py-5 lg:flex"
         >
-          <div className={`flex items-center gap-2 px-2 pb-6 ${sidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-white">
-              <CircleDollarSign size={15} />
-            </div>
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={`flex items-center gap-2 px-2 pb-6 transition-all duration-200 hover:opacity-70 active:scale-95 ${sidebarCollapsed ? "justify-center" : ""}`}
+          >
+            <img src="/logo.svg" alt="Finehance" className="h-7 w-7" />
             {!sidebarCollapsed && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -124,11 +786,11 @@ export function Dashboard() {
                 exit={{ opacity: 0 }}
                 className="leading-tight"
               >
-                <div className="text-[13px] font-semibold tracking-tight">Finehance</div>
+                <img src="/logo-text.svg" alt="Finehance" className="h-4" />
                 <div className="text-[10px] text-slate-400">Personal · Pro</div>
               </motion.div>
             )}
-          </div>
+          </button>
 
           <nav className="flex flex-col gap-0.5 text-[13px]">
             <NavItem icon={<LayoutDashboard size={14} />} label="Overview" active collapsed={sidebarCollapsed} />
@@ -167,12 +829,6 @@ export function Dashboard() {
           {/* Top bar */}
           <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200/70 bg-[#FAFAF9]/85 px-6 backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden rounded-md border border-slate-200 bg-white p-1.5 text-slate-500 transition hover:text-slate-900 lg:block"
-              >
-                <Menu size={14} />
-              </button>
               <div className="flex items-center gap-2 text-[13px] text-slate-500">
                 <span className="text-slate-400">Workspace</span>
                 <ChevronRight size={12} className="text-slate-300" />
@@ -196,43 +852,32 @@ export function Dashboard() {
               <button className="flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-slate-700">
                 <Plus size={13} /> New entry
               </button>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-semibold">
+              <button 
+                onClick={() => setProfileModalOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-semibold transition hover:border-slate-300 hover:shadow-sm"
+              >
                 JD
-              </div>
+              </button>
             </div>
           </header>
 
           <main className="px-6 py-6">
-            {/* Greeting */}
-            <div className="mb-6 flex items-end justify-between">
-              <div>
-                <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-                  Monday · Apr 27, 2026
-                </div>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                  Good afternoon, Jordan.
-                </h1>
-                <p className="mt-1 text-[13px] text-slate-500">
-                  You're <span className="font-medium text-emerald-600">+$1,288 ahead</span> of last week. Three budgets need attention.
-                </p>
-              </div>
-              <div className="hidden items-center gap-1 rounded-md border border-slate-200 bg-white p-0.5 md:flex">
-                {["1W", "1M", "3M", "YTD"].map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setRange(p)}
-                    className={`rounded-[5px] px-2.5 py-1 text-[11px] font-medium transition ${range === p ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-900"}`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* KPI strip */}
             <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Stat title="Total Balance" value="$16,618.00" trend="+12.5%" up data={sparkA} accent="#0F172A" />
-              <Stat title="Monthly Spent" value="$2,842.50" trend="-2.4%" up data={sparkB} accent="#0F172A" />
+              <MonthlySpentCard
+                value="$2,842.50"
+                trend="-2.4%"
+                data={sparkB}
+                spending={monthlySpending}
+                onToggle={() =>
+                  setMonthlySpending((prev) => ({
+                    ...prev,
+                    expanded: !prev.expanded,
+                  }))
+                }
+                onViewFullHistory={() => setDeepLedgerVisible(true)}
+              />
               <Stat title="Revenue MTD" value="$8,500.00" trend="+18.2%" up data={sparkC} accent="#059669" />
               <Stat title="Pending Invoices" value="$3,200.00" trend="2 due" data={sparkD} accent="#B45309" muted />
             </div>
@@ -536,6 +1181,55 @@ export function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Deep Ledger Modal */}
+      <AnimatePresence>
+        {deepLedgerVisible && (
+          <DeepLedger
+            transactions={mockDeepLedgerTransactions}
+            onClose={() => setDeepLedgerVisible(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {profileModalOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setProfileModalOpen(false)}
+              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2"
+            >
+              <UserProfileSuite 
+                profile={userProfile} 
+                onEditProfile={() => {
+                  setProfileModalOpen(false);
+                  console.log("Edit profile clicked");
+                }} 
+              />
+              <button
+                onClick={() => setProfileModalOpen(false)}
+                className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -543,9 +1237,12 @@ export function Dashboard() {
 // ─── Subcomponents ──────────────────────────────────────────────────────
 function NavItem({ icon, label, active, badge, collapsed }: { icon: React.ReactNode, label: string, active?: boolean, badge?: string, collapsed?: boolean }) {
   return (
-    <a
+    <motion.a
       href="#"
-      className={`flex items-center rounded-md px-2.5 py-1.5 transition ${collapsed ? "justify-center" : "justify-between"} ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"}`}
+      whileHover={{ x: collapsed ? 0 : 2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.15 }}
+      className={`flex items-center rounded-md px-2.5 py-1.5 transition-colors ${collapsed ? "justify-center" : "justify-between"} ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"}`}
       title={collapsed ? label : undefined}
     >
       <span className={`flex items-center gap-2.5 ${collapsed ? "" : ""}`}>
@@ -553,15 +1250,20 @@ function NavItem({ icon, label, active, badge, collapsed }: { icon: React.ReactN
         {!collapsed && label}
       </span>
       {badge && !collapsed && <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${active ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"}`}>{badge}</span>}
-    </a>
+    </motion.a>
   );
 }
 
 function Panel({ children, className = "", padding = "p-5" }: { children: React.ReactNode, className?: string, padding?: string }) {
   return (
-    <div className={`rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] ${padding === "0" ? "" : padding} ${className}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={`rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)] ${padding === "0" ? "" : padding} ${className}`}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -579,16 +1281,34 @@ function PanelHeader({ title, subtitle, right }: { title: string, subtitle?: str
 
 function Stat({ title, value, trend, up, data, accent, muted }: { title: string, value: string, trend: string, up?: boolean, data: { i: number, v: number }[], accent: string, muted?: boolean }) {
   return (
-    <div className="group rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="group rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-shadow hover:shadow-[0_4px_16px_rgba(15,23,42,0.06)]"
+    >
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">{title}</span>
-        <span className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${muted ? "bg-amber-50 text-amber-700" : up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+        <motion.span
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${muted ? "bg-amber-50 text-amber-700" : up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}
+        >
           {!muted && (up ? <ArrowUpRight size={9} /> : <ArrowDownRight size={9} />)}
           {trend}
-        </span>
+        </motion.span>
       </div>
       <div className="mt-2 flex items-end justify-between gap-2">
-        <div className="text-[22px] font-semibold tracking-tight tabular-nums text-slate-900">{value}</div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="text-[22px] font-semibold tracking-tight tabular-nums text-slate-900"
+        >
+          {value}
+        </motion.div>
         <div className="h-9 w-20">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
@@ -603,7 +1323,7 @@ function Stat({ title, value, trend, up, data, accent, muted }: { title: string,
           </ResponsiveContainer>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

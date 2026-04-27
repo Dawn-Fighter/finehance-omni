@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Outer rounded square -->
+  <rect x="5" y="5" width="90" height="90" rx="20" stroke="#0F172A" stroke-width="7" fill="none"/>
+  <!-- F left vertical -->
+  <line x1="22" y1="20" x2="22" y2="80" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  <!-- F top bar -->
+  <line x1="22" y1="20" x2="55" y2="20" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  <!-- F/H shared middle bar -->
+  <line x1="22" y1="50" x2="78" y2="50" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  <!-- H right vertical -->
+  <line x1="78" y1="20" x2="78" y2="80" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+  <!-- H inner left leg (bottom) -->
+  <line x1="55" y1="50" x2="55" y2="80" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+</svg>
