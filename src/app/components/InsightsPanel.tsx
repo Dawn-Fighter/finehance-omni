@@ -8,14 +8,15 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { TrendingUp, Lightbulb, Shield, BarChart3 } from "lucide-react";
 import { useARIMAForecast, type ForecastPoint, type TrendDirection } from "../hooks/useARIMAForecast";
 
 // ─── Config ─────────────────────────────────────────────────────────────
 const INSIGHT_CONFIGS = [
-  { id: "forecast", priority: "HIGH" as const, icon: "📈", title: "ARIMA Spending Forecast", color: "#6366f1" },
-  { id: "savings", priority: "MEDIUM" as const, icon: "💡", title: "Savings Opportunity", color: "#f59e0b" },
-  { id: "emergency", priority: "LOW" as const, icon: "🛡️", title: "Build Emergency Fund", color: "#10b981" },
-  { id: "budget", priority: "LOW" as const, icon: "📊", title: "Create Monthly Budget", color: "#8b5cf6" },
+  { id: "forecast", priority: "HIGH" as const, icon: <TrendingUp size={13} />, title: "ARIMA Spending Forecast", color: "#6366f1" },
+  { id: "savings", priority: "MEDIUM" as const, icon: <Lightbulb size={13} />, title: "Savings Opportunity", color: "#f59e0b" },
+  { id: "emergency", priority: "LOW" as const, icon: <Shield size={13} />, title: "Build Emergency Fund", color: "#10b981" },
+  { id: "budget", priority: "LOW" as const, icon: <BarChart3 size={13} />, title: "Create Monthly Budget", color: "#8b5cf6" },
 ];
 
 type Priority = "HIGH" | "MEDIUM" | "LOW";
@@ -57,8 +58,8 @@ function ForecastCard({ forecast, trend }: { forecast: ForecastPoint[]; trend: T
         <span className="text-[11px] text-slate-400">ARIMA(1,1,1) Model</span>
       </div>
 
-      <h3 className="mb-2 text-[13px] font-semibold leading-snug text-slate-900">
-        📈 30-Day Spending Forecast
+      <h3 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold leading-snug text-slate-900">
+        <TrendingUp size={13} className="text-indigo-500" /> 30-Day Spending Forecast
       </h3>
 
       <div className="mb-1 flex items-center gap-2">
@@ -140,8 +141,8 @@ function InsightCard({
           {config.priority}
         </span>
       </div>
-      <h3 className="mb-2 text-[13px] font-semibold leading-snug text-slate-900">
-        {config.icon} {config.title}
+      <h3 className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold leading-snug text-slate-900">
+        <span className="text-slate-400">{config.icon}</span> {config.title}
       </h3>
       <ul className="space-y-1 pl-4 text-xs leading-relaxed text-slate-500">
         {content.map((item, i) => (
@@ -161,7 +162,7 @@ export default function InsightsPanel() {
   return (
     <div className="py-4">
       <div className="mb-4 flex items-center gap-2.5">
-        <span className="text-sm font-bold tracking-wide text-indigo-500">✦ Vivien</span>
+        <span className="text-sm font-bold tracking-wide text-indigo-500">Vivien</span>
         <span className="text-[13px] text-slate-500">
           Insights — Personalized recommendations
         </span>

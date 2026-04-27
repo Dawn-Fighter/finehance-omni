@@ -8,7 +8,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #6366f1;
+  background: #94a3b8;
   animation: dotBounce 1.4s infinite ease-in-out;
 }
 .typing-dots span:nth-child(1) { animation-delay: 0s; }

@@ -1251,42 +1251,45 @@ export function Dashboard() {
 
               {/* Right rail */}
               <div className="space-y-5">
-                {/* Bot Hub */}
+                {/* Vivien AI */}
                 <Panel>
                   <div className="mb-3 flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sky-50 text-sky-600 ring-1 ring-sky-100">
-                        <Send size={13} />
+                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100">
+                        <Sparkles size={13} />
                       </div>
                       <div>
-                        <div className="text-[13px] font-semibold">Telegram Bot</div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400">Bot Hub</div>
+                        <div className="text-[13px] font-semibold">Vivien</div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-400">AI Assistant</div>
                       </div>
                     </div>
-                    {telegramLinked ? (
-                      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-100">
-                        <CheckCircle2 size={10} /> Live
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-100">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       </span>
-                    ) : (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-100">Pending</span>
-                    )}
+                      Online
+                    </span>
                   </div>
 
-                  {telegramLinked && (
-                    <div className="mb-3 flex items-center justify-center gap-2 rounded-lg bg-emerald-50 py-2 text-[12px] font-medium text-emerald-700 ring-1 ring-emerald-100">
-                      <CheckCircle2 size={14} /> Connected
-                    </div>
-                  )}
+                  <p className="mb-3 text-[12px] leading-relaxed text-slate-500">
+                    Ask about your finances, spending patterns, or get personalized recommendations.
+                  </p>
 
-                  <button
-                    onClick={() => {
-                      window.open(`https://t.me/Finehance_bot?start=${telegramToken}`, "_blank");
-                      if (!telegramLinked) setTimeout(() => setTelegramLinked(true), 1500);
-                    }}
-                    className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 py-2.5 text-[12px] font-semibold text-white transition hover:bg-slate-700"
-                  >
-                    <Send size={13} /> EXECUTE BOT COMMANDS
-                  </button>
+                  <div className="space-y-2">
+                    <button className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-[11px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
+                      <ArrowRight size={10} className="shrink-0 text-indigo-500" />
+                      Show my spending forecast
+                    </button>
+                    <button className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-[11px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
+                      <ArrowRight size={10} className="shrink-0 text-indigo-500" />
+                      Where can I save money?
+                    </button>
+                    <button className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-[11px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
+                      <ArrowRight size={10} className="shrink-0 text-indigo-500" />
+                      Review my subscriptions
+                    </button>
+                  </div>
                 </Panel>
 
                 {/* Monthly Summary */}
