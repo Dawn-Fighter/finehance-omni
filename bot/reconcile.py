@@ -61,17 +61,20 @@ def _candidates_match(
     if abs(float(bank["amount"]) - float(manual["amount"])) > amount_tolerance:
         return False, "amount mismatch"
 
+    # Strongest signal: same UPI ref id. Check this BEFORE the time-window
+    # rejection — a UPI screenshot's parsed timestamp can be hours off the
+    # bank's posted timestamp (or missing entirely), but if the ref ids match
+    # the two records describe the same payment regardless of the time gap.
+    if bank.get("bank_txn_id") and manual.get("bank_txn_id"):
+        if bank["bank_txn_id"] == manual["bank_txn_id"]:
+            return True, "same txn_ref"
+
     ts_bank = _parse_ts(bank.get("timestamp"))
     ts_manual = _parse_ts(manual.get("timestamp"))
     if ts_bank and ts_manual:
         delta = abs((ts_bank - ts_manual).total_seconds()) / 60
         if delta > time_window_minutes:
             return False, f"time gap {delta:.0f}m"
-
-    # Strongest signal: same UPI ref id.
-    if bank.get("bank_txn_id") and manual.get("bank_txn_id"):
-        if bank["bank_txn_id"] == manual["bank_txn_id"]:
-            return True, "same txn_ref"
 
     bank_blob = " ".join(
         filter(

@@ -7,7 +7,13 @@ focused on UX while testable logic lives in a pure module.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Callable
+
+# Setu data-session statuses we treat as ready to fetch FI from. Anything else
+# (PENDING, ACTIVE, FAILED) means we shouldn't call fetch_data yet.
+_TERMINAL_READY_STATUSES = {"COMPLETED", "PARTIAL"}
+_TERMINAL_FAIL_STATUSES = {"FAILED", "REJECTED", "EXPIRED", "REVOKED"}
 
 import storage
 
@@ -85,6 +91,8 @@ def run_full_sync(
     consent_id: str,
     *,
     categorizer: Callable[[str], str],
+    max_poll_attempts: int = 10,
+    poll_interval_seconds: float = 1.0,
 ) -> dict[str, int]:
     """End-to-end: create session, wait for ready (via mock or polled), fetch, save.
 
@@ -95,8 +103,25 @@ def run_full_sync(
     session = client.create_data_session(consent_id)
     session_id = session["id"]
     storage.upsert_data_session(session_id, consent_id, user_id, session.get("status", "PENDING"))
-    # Poll once — both mock and Setu sandbox typically return COMPLETED quickly.
-    session_status = client.get_data_session(session_id)
-    storage.upsert_data_session(session_id, consent_id, user_id, session_status.get("status", "PENDING"))
+
+    # Poll until the session reports a terminal status. The mock returns
+    # COMPLETED on the first poll; the real Setu sandbox usually settles
+    # within a few seconds but can take longer when an FIP is slow.
+    status = session.get("status", "PENDING")
+    for attempt in range(max_poll_attempts):
+        if status in _TERMINAL_READY_STATUSES:
+            break
+        if status in _TERMINAL_FAIL_STATUSES:
+            raise RuntimeError(f"Setu data session {session_id} failed: status={status}")
+        time.sleep(poll_interval_seconds if attempt else 0)
+        session_status = client.get_data_session(session_id)
+        status = session_status.get("status", status)
+        storage.upsert_data_session(session_id, consent_id, user_id, status)
+    else:
+        raise RuntimeError(
+            f"Setu data session {session_id} did not reach a ready status after "
+            f"{max_poll_attempts} polls (last status={status})"
+        )
+
     fi_payload = client.fetch_data(session_id)
     return sync_fi_payload(user_id, fi_payload, categorizer=categorizer)
