@@ -1,1 +1,35 @@
-.env\ndata/expenses.json\nassets/*.png\n__pycache__/\n*.pyc
+# Secrets / env
+.env
+.env.local
+.env.*.local
+
+# Local data (user transactions, exports, generated DBs)
+data/expenses.json
+data/finehance.db
+data/finehance.db-journal
+data/finehance.db-shm
+data/finehance.db-wal
+
+# User-uploaded media (voice notes, receipt photos, generated charts)
+assets/*.png
+assets/*.jpg
+assets/*.jpeg
+assets/*.ogg
+assets/*.oga
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
