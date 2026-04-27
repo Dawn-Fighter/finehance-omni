@@ -64,6 +64,29 @@ class StorageTests(unittest.TestCase):
         self.assertIsNone(second, "Duplicate bank txn should not insert again")
         self.assertEqual(len(self.storage.list_expenses("42")), 1)
 
+    def test_upi_screenshot_dedup_when_bank_account_id_is_null(self):
+        # Regression test for the SQLite NULL-uniqueness gotcha: same UPI ref
+        # from the same user must collapse even though bank_account_id is None.
+        first = self.storage.save_expense(
+            user_id="42",
+            amount=200,
+            category="Transfers",
+            description="UPI to friend",
+            source="upi_screenshot",
+            bank_txn_id="UPI-REF-XYZ",
+        )
+        second = self.storage.save_expense(
+            user_id="42",
+            amount=200,
+            category="Transfers",
+            description="UPI to friend",
+            source="upi_screenshot",
+            bank_txn_id="UPI-REF-XYZ",
+        )
+        self.assertIsNotNone(first)
+        self.assertIsNone(second, "Same UPI ref must not insert twice for one user")
+        self.assertEqual(len(self.storage.list_expenses("42")), 1)
+
     def test_consent_and_data_session_lifecycle(self):
         self.storage.upsert_consent("c-1", "42", "PENDING", "https://setu/c/1")
         self.storage.upsert_consent("c-1", "42", "ACTIVE")

@@ -81,6 +81,25 @@ class SetuMockFlowTests(unittest.TestCase):
         self.assertEqual(second["saved"], 0)
         self.assertEqual(second["duplicates"], second["fetched"])
 
+    def test_get_default_client_returns_singleton_mock(self):
+        # Regression: when no Setu creds are configured the bot must return the
+        # SAME mock instance across calls so /connect_bank state survives /sync.
+        from setu.client import get_default_client, reset_default_client
+
+        # Ensure no creds in the environment for this test.
+        for key in ("SETU_CLIENT_ID", "SETU_CLIENT_SECRET", "SETU_PRODUCT_INSTANCE_ID"):
+            os.environ.pop(key, None)
+        reset_default_client()
+
+        a = get_default_client()
+        consent = a.create_consent(vua="user@setu")
+
+        b = get_default_client()
+        self.assertIs(a, b, "get_default_client() must cache the mock client")
+
+        # And the second handle can read the consent the first one created.
+        self.assertEqual(b.get_consent(consent["id"])["status"], "ACTIVE")
+
     def test_parser_extracts_vpa_from_upi_narration(self):
         rows = self.parse_fi_data(
             {

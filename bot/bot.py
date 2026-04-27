@@ -46,6 +46,17 @@ def _md(text):
     return escape_markdown(str(text or ""), version=1)
 
 
+def _code(text):
+    """Sanitize text destined for a Telegram Markdown code span.
+
+    Markdown v1 renders code spans literally and doesn't interpret backslash
+    escapes — applying ``escape_markdown`` here would surface visible
+    backslashes (common in VPAs with underscores). Instead we just strip
+    backticks so the code span doesn't break.
+    """
+    return str(text or "").replace("`", "'")
+
+
 def log_expense_items(user_id, items, source):
     logged = []
     for item in items:
@@ -184,8 +195,8 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             merchant=merchant,
             bank_txn_id=txn_ref,
         )
-        ref_line = f"\n🧾 Ref: `{_md(txn_ref)}`" if txn_ref else ""
-        recipient_line = f"\n💌 To: `{_md(recipient_vpa)}`" if recipient_vpa else ""
+        ref_line = f"\n🧾 Ref: `{_code(txn_ref)}`" if txn_ref else ""
+        recipient_line = f"\n💌 To: `{_code(recipient_vpa)}`" if recipient_vpa else ""
         await update.message.reply_text(
             f"📲 *UPI payment detected*\n"
             f"✅ Logged ₹{_format_amount(amount)} under **{_md(category)}**\n"
@@ -305,7 +316,7 @@ async def connect_bank(update: Update, context: ContextTypes.DEFAULT_TYPE):
         consent = client.create_consent(vua=vua)
     except Exception as exc:
         logger.exception("Setu consent failed")
-        await update.message.reply_text(f"❌ Couldn't reach Setu: `{_md(exc)}`", parse_mode='Markdown')
+        await update.message.reply_text(f"❌ Couldn't reach Setu: `{_code(exc)}`", parse_mode='Markdown')
         return
 
     consent_id = consent.get("id")
@@ -389,7 +400,7 @@ async def sync_bank(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as exc:
         logger.exception("Setu sync failed")
-        await update.message.reply_text(f"❌ Sync failed: `{_md(exc)}`", parse_mode='Markdown')
+        await update.message.reply_text(f"❌ Sync failed: `{_code(exc)}`", parse_mode='Markdown')
         return
 
     # Auto-reconcile manual + bank duplicates immediately so the next /summary

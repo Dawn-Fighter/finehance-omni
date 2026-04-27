@@ -53,8 +53,15 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 CREATE INDEX IF NOT EXISTS idx_expenses_user ON expenses(user_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_timestamp ON expenses(timestamp);
+-- SQLite treats NULL != NULL in unique indexes, which would defeat dedup for
+-- UPI-screenshot rows that have a txn ref but no linked bank account. Coalesce
+-- both sides of the index to a sentinel so identical (NULL, ref) pairs collide.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_bank_unique
-    ON expenses(bank_account_id, bank_txn_id)
+    ON expenses(
+        COALESCE(bank_account_id, ''),
+        COALESCE(user_id, ''),
+        bank_txn_id
+    )
     WHERE bank_txn_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS consents (

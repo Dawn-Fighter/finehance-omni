@@ -177,17 +177,36 @@ class SetuAAClient:
         return self._request("GET", f"/sessions/{session_id}/data")
 
 
+_mock_singleton: "object | None" = None
+
+
 def get_default_client() -> "SetuAAClient | object":
     """Return a real Setu client if creds are configured, else the mock client.
+
+    The mock client is cached as a process-level singleton so consent and
+    session state created in one bot handler (e.g. ``/connect_bank``) persists
+    across subsequent handlers (e.g. ``/sync``). The real client is stateless
+    and is created fresh each call.
 
     Imported lazily so importing ``bot.setu`` never fails when the user hasn't
     set up Setu yet.
     """
+    global _mock_singleton
+
     config = SetuConfig.from_env()
     if config.is_configured:
         logger.info("Using real Setu AA client (%s)", config.base_url)
         return SetuAAClient(config)
+
     from .mock import MockSetuAAClient
 
-    logger.warning("Setu credentials missing — using MockSetuAAClient with synthetic data")
-    return MockSetuAAClient(config)
+    if _mock_singleton is None:
+        logger.warning("Setu credentials missing — using MockSetuAAClient with synthetic data")
+        _mock_singleton = MockSetuAAClient(config)
+    return _mock_singleton
+
+
+def reset_default_client() -> None:
+    """Test-only helper to clear the cached mock client between cases."""
+    global _mock_singleton
+    _mock_singleton = None
