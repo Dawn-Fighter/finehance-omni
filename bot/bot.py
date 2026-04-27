@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from ai_processor import extract_expense_details, transcribe_voice, extract_from_receipt
 from categorizer import get_category
-from utils import save_expense
+from utils import save_expense, generate_pie_chart
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -92,6 +92,18 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ I couldn't extract the amount from this receipt. Make sure the total is clear.")
 
+async def summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action="upload_photo")
+    
+    chart_path = generate_pie_chart(update.effective_user.id)
+    if chart_path and os.path.exists(chart_path):
+        await update.message.reply_photo(
+            photo=open(chart_path, 'rb'), 
+            caption="📊 **Your Financial Snapshot**\nHere is your spending breakdown by category."
+        )
+    else:
+        await update.message.reply_text("📉 No data yet! Log some expenses first to see your summary.")
+
 if __name__ == '__main__':
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN not found in environment variables.")
@@ -99,6 +111,7 @@ if __name__ == '__main__':
         application = ApplicationBuilder().token(TOKEN).build()
         
         application.add_handler(CommandHandler('start', start))
+        application.add_handler(CommandHandler('summary', summary))
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
         application.add_handler(MessageHandler(filters.VOICE, handle_voice))
         application.add_handler(MessageHandler(filters.PHOTO, handle_image))
