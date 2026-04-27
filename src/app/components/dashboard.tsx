@@ -13,6 +13,8 @@ import {
   Coffee, ShoppingBag, Building2, Briefcase, Cloud, Calendar,
   X
 } from "lucide-react";
+import InsightsPanel from "./InsightsPanel";
+import TelegramChatBar from "./TelegramChatBar";
 
 // ─── TypeScript Interfaces ──────────────────────────────────────────────
 interface UserProfile {
@@ -861,7 +863,7 @@ export function Dashboard() {
             </div>
           </header>
 
-          <main className="px-6 py-6">
+          <main className="px-6 pb-24 py-6">
             {/* KPI strip */}
             <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Stat title="Total Balance" value="$16,618.00" trend="+12.5%" up data={sparkA} accent="#0F172A" />
@@ -1051,6 +1053,9 @@ export function Dashboard() {
                     })}
                   </div>
                 </Panel>
+
+                {/* ARIMA Insights */}
+                <InsightsPanel />
               </div>
 
               {/* Right rail */}
@@ -1181,6 +1186,9 @@ export function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Floating Chat Bar */}
+      <TelegramChatBar />
 
       {/* Deep Ledger Modal */}
       <AnimatePresence>
