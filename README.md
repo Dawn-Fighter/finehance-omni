@@ -137,7 +137,7 @@ The custom MiniLM engine is trained on 23 specialized financial vectors:
 
 <div align="center">
   
-**Developed with ❤️ by [Navaneeth K (CyberKunju)](https://github.com/Dawn-Fighter)**  
+**Developed with ❤️ by TEAM REQUIEM [Navaneeth,Chethas,Kashyap]**  
 *FineHance Categorization Model Creator & Full-Stack Developer*
 
 </div>
