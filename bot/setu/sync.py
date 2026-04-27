@@ -62,6 +62,7 @@ def sync_fi_payload(
             merchant=row.get("merchant"),
             bank_account_id=row.get("bank_account_id"),
             bank_txn_id=row.get("bank_txn_id"),
+            recipient_vpa=row.get("recipient_vpa"),
         )
         if inserted_id is None:
             duplicates += 1

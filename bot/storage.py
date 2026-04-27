@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     merchant TEXT,
     bank_account_id TEXT,
     bank_txn_id TEXT,
+    recipient_vpa TEXT,
     fingerprint TEXT,
     merged_into INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -124,9 +125,20 @@ def _ensure_initialised() -> None:
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
         with sqlite3.connect(DB_PATH, timeout=30) as conn:
             conn.executescript(SCHEMA)
+            _apply_migrations(conn)
             conn.commit()
         _initialised = True
         _maybe_import_legacy_json()
+
+
+def _apply_migrations(conn: sqlite3.Connection) -> None:
+    """Best-effort additive migrations for DBs created by older versions."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(expenses)")}
+    if "recipient_vpa" not in cols:
+        try:
+            conn.execute("ALTER TABLE expenses ADD COLUMN recipient_vpa TEXT")
+        except sqlite3.OperationalError as exc:
+            logger.warning("Could not add recipient_vpa column: %s", exc)
 
 
 def _maybe_import_legacy_json() -> None:
@@ -193,6 +205,7 @@ def save_expense(
     merchant: str | None = None,
     bank_account_id: str | None = None,
     bank_txn_id: str | None = None,
+    recipient_vpa: str | None = None,
     fingerprint: str | None = None,
 ) -> int | None:
     """Insert one expense. Returns row id, or None if a duplicate bank txn was skipped."""
@@ -203,8 +216,8 @@ def save_expense(
                 """
                 INSERT INTO expenses
                     (user_id, amount, category, description, source, timestamp,
-                     merchant, bank_account_id, bank_txn_id, fingerprint)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     merchant, bank_account_id, bank_txn_id, recipient_vpa, fingerprint)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(user_id),
@@ -216,6 +229,7 @@ def save_expense(
                     merchant,
                     bank_account_id,
                     bank_txn_id,
+                    recipient_vpa,
                     fingerprint,
                 ),
             )

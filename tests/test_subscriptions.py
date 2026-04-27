@@ -36,6 +36,20 @@ class SubscriptionDetectorTests(unittest.TestCase):
         self.assertEqual(sub["occurrences"], 4)
         self.assertAlmostEqual(sub["monthly_cost"], 649.0)
 
+    def test_keyword_match_handles_dots_and_plus(self):
+        # Regression: previously cult.fit / disney+ never matched the SaaS
+        # keyword set because the keywords kept their dots/'+' but fingerprints
+        # were normalised — so the relaxed 2-occurrence rule never fired.
+        for raw, normalised in [
+            ("CULT.FIT MEMBERSHIP", "cult fit"),
+            ("Disney+ Hotstar", "disney"),
+            ("CURE.FIT", "cure fit"),
+        ]:
+            self.assertTrue(
+                any(k in normalised for k in subscriptions.KNOWN_SUBSCRIPTION_KEYWORDS),
+                f"{raw!r} (norm={normalised!r}) should match a known SaaS keyword",
+            )
+
     def test_does_not_treat_random_groceries_as_subscription(self):
         expenses = [
             _make(120, 1, "Bigbasket order"),

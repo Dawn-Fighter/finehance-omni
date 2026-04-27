@@ -17,6 +17,7 @@ URL in your Setu Bridge dashboard.
 """
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import sys
@@ -59,8 +60,10 @@ def _check_auth(request: Request) -> None:
     """
     if not WEBHOOK_SHARED_SECRET:
         return
-    auth = request.headers.get("authorization") or request.headers.get("x-webhook-secret")
-    if auth != WEBHOOK_SHARED_SECRET:
+    auth = request.headers.get("authorization") or request.headers.get("x-webhook-secret") or ""
+    # hmac.compare_digest is constant-time so we don't leak the secret one byte
+    # at a time via response-time side channels.
+    if not hmac.compare_digest(auth, WEBHOOK_SHARED_SECRET):
         raise HTTPException(status_code=401, detail="invalid webhook secret")
 
 

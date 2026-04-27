@@ -194,6 +194,7 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             timestamp=txn_date,
             merchant=merchant,
             bank_txn_id=txn_ref,
+            recipient_vpa=recipient_vpa,
         )
         ref_line = f"\n🧾 Ref: `{_code(txn_ref)}`" if txn_ref else ""
         recipient_line = f"\n💌 To: `{_code(recipient_vpa)}`" if recipient_vpa else ""

@@ -33,7 +33,19 @@ CADENCES = [
     ("yearly", 365, 14),
 ]
 
-KNOWN_SUBSCRIPTION_KEYWORDS = {
+_NORM_RE = re.compile(r"[^a-z0-9 ]+")
+
+
+def _normalise(text: str) -> str:
+    text = (text or "").lower()
+    text = _NORM_RE.sub(" ", text)
+    return " ".join(text.split())
+
+
+# Raw keywords. The detector matches against *normalised* fingerprints, so we
+# normalise the keywords through the same pipeline at module import time —
+# otherwise entries with dots or '+' (cult.fit, disney+) would never match.
+_RAW_SUBSCRIPTION_KEYWORDS = {
     "netflix", "spotify", "prime", "hotstar", "disney+", "apple music",
     "youtube premium", "youtube music", "tidal", "saavn", "gaana",
     "icloud", "google one", "dropbox", "office 365", "microsoft 365",
@@ -42,14 +54,9 @@ KNOWN_SUBSCRIPTION_KEYWORDS = {
     "cult.fit", "cultfit", "cure.fit", "fittr", "healthifyme",
     "swiggy one", "zomato gold", "amazon prime", "flipkart plus",
 }
-
-_NORM_RE = re.compile(r"[^a-z0-9 ]+")
-
-
-def _normalise(text: str) -> str:
-    text = (text or "").lower()
-    text = _NORM_RE.sub(" ", text)
-    return " ".join(text.split())
+KNOWN_SUBSCRIPTION_KEYWORDS = {
+    n for n in (_normalise(k) for k in _RAW_SUBSCRIPTION_KEYWORDS) if n
+}
 
 
 def _fingerprint(expense: dict[str, Any]) -> str:
