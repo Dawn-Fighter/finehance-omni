@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -37,7 +38,14 @@ class SetuError(RuntimeError):
 
 @dataclass(frozen=True)
 class SetuConfig:
-    base_url: str = "https://fiu-uat.setu.co"
+    # Setu's OAuth-authenticated AA endpoint base. Sandbox is uat.setu.co; in
+    # production override SETU_BASE_URL to https://prod.setu.co.
+    base_url: str = "https://uat.setu.co"
+    # Path prefix Setu added when they introduced OAuth — the API moved from
+    # /api/(path) to /api/v2/(path). All calls below are relative to this.
+    api_prefix: str = "/api/v2"
+    # Token endpoint for the client-credentials exchange.
+    token_path: str = "/api/v2/auth/token"
     client_id: str = ""
     client_secret: str = ""
     product_instance_id: str = ""
@@ -53,6 +61,8 @@ class SetuConfig:
     def from_env(cls) -> "SetuConfig":
         return cls(
             base_url=os.getenv("SETU_BASE_URL", cls.base_url),
+            api_prefix=os.getenv("SETU_API_PREFIX", cls.api_prefix),
+            token_path=os.getenv("SETU_TOKEN_PATH", cls.token_path),
             client_id=os.getenv("SETU_CLIENT_ID", ""),
             client_secret=os.getenv("SETU_CLIENT_SECRET", ""),
             product_instance_id=os.getenv("SETU_PRODUCT_INSTANCE_ID", ""),
@@ -68,38 +78,107 @@ class SetuConfig:
 
 
 class SetuAAClient:
-    """Real-network client. Use ``MockSetuAAClient`` (in ``mock.py``) for tests."""
+    """Real-network client. Use ``MockSetuAAClient`` (in ``mock.py``) for tests.
+
+    Authenticates via Setu OAuth: clientID + secret → short-lived bearer token,
+    cached in-memory until ``expiresIn`` (refreshed automatically with a small
+    safety margin). Every API call sends ``Authorization: Bearer <token>`` plus
+    ``x-product-instance-id`` per Setu Bridge's OAuth-mode API contract.
+    """
+
+    # Refresh tokens this many seconds before they're due to expire so we never
+    # send an already-expired token on a request that's mid-flight.
+    _TOKEN_REFRESH_MARGIN_SECONDS = 60
 
     def __init__(self, config: SetuConfig | None = None, session: requests.Session | None = None):
         self.config = config or SetuConfig.from_env()
         self._session = session or requests.Session()
+        self._token: str | None = None
+        self._token_expires_at: float = 0.0
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+    def _fetch_token(self) -> str:
+        """Exchange client_id + secret for a short-lived bearer token."""
+        url = f"{self.config.base_url.rstrip('/')}{self.config.token_path}"
+        try:
+            resp = self._session.post(
+                url,
+                json={"clientID": self.config.client_id, "secret": self.config.client_secret},
+                headers={"Content-Type": "application/json"},
+                timeout=30,
+            )
+        except requests.RequestException as exc:
+            raise SetuError(f"Network error calling Setu auth: {exc}") from exc
+        if resp.status_code >= 400:
+            raise SetuError(
+                f"Setu auth POST {self.config.token_path} → {resp.status_code}: {resp.text[:500]}"
+            )
+        try:
+            body = resp.json()
+        except ValueError as exc:
+            raise SetuError(f"Setu auth returned non-JSON: {resp.text[:200]}") from exc
+        # Setu's response shape is ``{"data": {"token": ..., "expiresIn": ...}, "success": true, ...}``
+        # but tolerate the flatter ``{"token": ..., "expiresIn": ...}`` shape too.
+        data = body.get("data", body) or {}
+        token = data.get("token") or data.get("access_token") or body.get("token")
+        if not token:
+            raise SetuError(f"Setu auth response missing token: {body}")
+        expires_in = float(data.get("expiresIn") or body.get("expiresIn") or 3600)
+        self._token = str(token)
+        self._token_expires_at = time.time() + max(60.0, expires_in - self._TOKEN_REFRESH_MARGIN_SECONDS)
+        return self._token
+
+    def _ensure_token(self) -> str:
+        if self._token and time.time() < self._token_expires_at:
+            return self._token
+        return self._fetch_token()
+
     def _headers(self) -> dict[str, str]:
+        token = self._ensure_token()
         return {
-            "x-client-id": self.config.client_id,
-            "x-client-secret": self.config.client_secret,
+            "Authorization": f"Bearer {token}",
             "x-product-instance-id": self.config.product_instance_id,
             "Content-Type": "application/json",
         }
 
     def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
-        url = f"{self.config.base_url.rstrip('/')}{path}"
+        # ``path`` is given relative to the AA API root (e.g. "/consents"). The
+        # OAuth-mode endpoint lives under config.api_prefix ("/api/v2" by
+        # default), so we prefix it here. Pre-prefixed paths pass through.
+        if path.startswith(self.config.api_prefix):
+            full_path = path
+        else:
+            full_path = f"{self.config.api_prefix.rstrip('/')}{path}"
+        url = f"{self.config.base_url.rstrip('/')}{full_path}"
         headers = {**self._headers(), **kwargs.pop("headers", {})}
         try:
             resp = self._session.request(method, url, headers=headers, timeout=30, **kwargs)
         except requests.RequestException as exc:
             raise SetuError(f"Network error calling Setu: {exc}") from exc
+        # If the token expired between _ensure_token and the actual call, retry once.
+        if resp.status_code in (401, 403) and self._token:
+            self._token = None
+            headers = {**self._headers(), **kwargs.get("headers", {})}
+            try:
+                resp = self._session.request(method, url, headers=headers, timeout=30, **kwargs)
+            except requests.RequestException as exc:
+                raise SetuError(f"Network error calling Setu (retry): {exc}") from exc
         if resp.status_code >= 400:
             raise SetuError(
-                f"Setu {method} {path} → {resp.status_code}: {resp.text[:500]}"
+                f"Setu {method} {full_path} → {resp.status_code}: {resp.text[:500]}"
             )
         try:
-            return resp.json()
+            body = resp.json()
         except ValueError:
             return {"_raw": resp.text}
+        # Setu's success envelope is ``{"data": {...}, "success": true}`` for
+        # most AA endpoints; unwrap it so callers see the inner payload
+        # uniformly. If the body has no ``data`` key, return as-is.
+        if isinstance(body, dict) and "data" in body and isinstance(body["data"], dict):
+            return body["data"]
+        return body
 
     # ------------------------------------------------------------------
     # Consent flow
