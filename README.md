@@ -38,9 +38,17 @@ Unlike generic trackers, we use a specialized, fine-tuned **MiniLM-L6 Transforme
 - **Precision:** **96.56% Accuracy** across 23 distinct financial categories.
 - **Latency:** Ultra-fast inference (~6,600 samples/sec).
 
-### 📊 4. Professional Visualization & Insights
+### 🌍 4. South Indian Multilingual Support
+Talk to the bot in your native language. We support:
+- **Malayalam (മലയാളം)**
+- **Tamil (தமிழ்)**
+- **Telugu (తెలుగు)**
+- **Kannada (ಕನ್ನಡ)**
+- *English & Hindi (Standard)*
+
+### 📊 5. Professional Visualization & Insights
 - **In-Bot Charts:** Get instant Pie Charts directly in your Telegram chat via `/summary`.
-- **AI Insights:** Proactive advice based on spending patterns (e.g., *"You've spent 40% of your budget on Food Delivery this week. Consider cooking more!"*).
+- **AI Insights:** Proactive advice based on spending patterns.
 - **Web Dashboard:** A real-time **Streamlit** command center for deep-dives and historical tracking.
 
 ---
@@ -53,7 +61,7 @@ graph TD
     B --> C{Processing Layer}
     C -->|Voice| D[Wispr/Whisper API]
     C -->|Image| E[GPT-4o Vision]
-    D --> F[Text Extraction]
+    D --> F[Multilingual Text Extraction]
     E --> F
     F --> G[Custom ML Categorizer: MiniLM]
     G --> H[Categorized Data]
